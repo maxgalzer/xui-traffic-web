@@ -63,9 +63,9 @@ http://<IP вашего сервера>:<указанный порт> (по ум
 bash <(curl -Ls https://github.com/maxgalzer/xui-traffic-web/raw/main/uninstall.sh)
 ```
 - **Перезапуск сервиса**:  
-    ```bash
-    systemctl restart xui-traffic-web
-    ```
+```bash
+systemctl restart xui-traffic-web
+```
 
 ---
 ## 🗑️ Удаление

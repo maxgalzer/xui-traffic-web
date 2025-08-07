@@ -58,7 +58,7 @@ def read_logs():
             parsed = parse_log_line(line)
             if parsed:
                 logs.append(parsed)
-    return logs
+    return list(reversed(logs))
 
 # ==== Авторизация ====
 

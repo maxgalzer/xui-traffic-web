@@ -5,18 +5,15 @@ from flask_bcrypt import Bcrypt
 from datetime import datetime, timedelta
 import pandas as pd
 
-# ==== Конфиг ====
 APP_FOLDER = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(APP_FOLDER, "db.sqlite3")
 ACCESS_LOG_PATH = os.getenv("ACCESS_LOG_PATH", os.path.join(APP_FOLDER, "access.log"))
-TIMEZONE_SHIFT = int(os.getenv("TIMEZONE_SHIFT", 0))  # В часах (например, +5)
+TIMEZONE_SHIFT = int(os.getenv("TIMEZONE_SHIFT", 0))
 PER_PAGE = 50
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 bcrypt = Bcrypt(app)
-
-# ==== Вспомогательные функции ====
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -24,18 +21,26 @@ def get_db():
     return conn
 
 def parse_log_line(line):
-    # Пример: 2025/08/06 15:54:22.272696 from 5.167.225.135:62124 accepted tcp:speed.cloudflare.com:443 [inbound-16880 >> direct] email: 7p5uebch
     try:
         parts = line.strip().split()
         dt = " ".join(parts[0:2])
         ip_port = parts[3]
-        protocol = parts[5].split(":")[0]
-        dst = parts[5].split(":")[1:]
-        domain = ":".join(dst) if len(dst) > 1 else dst[0]
-        inbound = parts[6][1:-1].split(">>")[0].replace("inbound-", "").strip()
-        email = parts[-1] if "email:" in parts[-2] else "-"
+        protocol_dst = parts[5]
+        protocol = protocol_dst.split(":")[0]
+        domain = ":".join(protocol_dst.split(":")[1:])
+        inbound = "-"
+        direction = "-"
+        if "[" in line and "]" in line:
+            meta = line.split("[",1)[1].split("]",1)[0].strip()  # inbound-51561 >> direct
+            if ">>" in meta:
+                inbound = meta.split(">>")[0].strip()
+                direction = meta.split(">>")[1].strip()
+            else:
+                inbound = meta
+        email = "-"
+        if "email:" in line:
+            email = line.split("email:")[-1].strip()
         ip = ip_port.split(":")[0]
-        # Парсим дату/время
         dt_obj = datetime.strptime(dt, "%Y/%m/%d %H:%M:%S.%f") + timedelta(hours=TIMEZONE_SHIFT)
         return {
             "datetime": dt_obj.strftime("%d.%m.%Y %H:%M:%S"),
@@ -43,7 +48,8 @@ def parse_log_line(line):
             "protocol": protocol,
             "domain": domain,
             "inbound": inbound,
-            "email": email.replace("email:", "").strip(),
+            "direction": direction,
+            "email": email,
             "raw": line.strip()
         }
     except Exception:
@@ -59,8 +65,6 @@ def read_logs():
             if parsed:
                 logs.append(parsed)
     return list(reversed(logs))
-
-# ==== Авторизация ====
 
 def hash_password(password):
     return bcrypt.generate_password_hash(password).decode('utf-8')
@@ -87,8 +91,6 @@ def verify_admin(username, password):
     if res and check_password(password, res["password"]):
         return True
     return False
-
-# ==== Роуты ====
 
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -126,6 +128,7 @@ def logs():
     q_ip = request.args.get("ip", "").strip()
     q_domain = request.args.get("domain", "").strip()
     q_inbound = request.args.get("inbound", "").strip()
+    q_direction = request.args.get("direction", "").strip()
     q_date = request.args.get("date", "").strip()
     filtered = []
     for l in logs:
@@ -136,6 +139,8 @@ def logs():
         if q_domain and q_domain not in l["domain"]:
             continue
         if q_inbound and q_inbound not in l["inbound"]:
+            continue
+        if q_direction and q_direction not in l["direction"]:
             continue
         if q_date and q_date not in l["datetime"]:
             continue
@@ -146,7 +151,7 @@ def logs():
     pages = (total + per_page - 1) // per_page
     paged = filtered[(page-1)*per_page:page*per_page]
     return render_template("logs.html", logs=paged, page=page, pages=pages, total=total,
-                           q_email=q_email, q_ip=q_ip, q_domain=q_domain, q_inbound=q_inbound, q_date=q_date)
+                           q_email=q_email, q_ip=q_ip, q_domain=q_domain, q_inbound=q_inbound, q_direction=q_direction, q_date=q_date)
 
 @app.route("/export")
 def export():
@@ -157,6 +162,7 @@ def export():
     q_ip = request.args.get("ip", "").strip()
     q_domain = request.args.get("domain", "").strip()
     q_inbound = request.args.get("inbound", "").strip()
+    q_direction = request.args.get("direction", "").strip()
     q_date = request.args.get("date", "").strip()
     filtered = []
     for l in logs:
@@ -167,6 +173,8 @@ def export():
         if q_domain and q_domain not in l["domain"]:
             continue
         if q_inbound and q_inbound not in l["inbound"]:
+            continue
+        if q_direction and q_direction not in l["direction"]:
             continue
         if q_date and q_date not in l["datetime"]:
             continue
@@ -210,6 +218,7 @@ def delete_by_filter():
     q_ip = request.form.get("ip", "").strip()
     q_domain = request.form.get("domain", "").strip()
     q_inbound = request.form.get("inbound", "").strip()
+    q_direction = request.form.get("direction", "").strip()
     q_date = request.form.get("date", "").strip()
     to_keep = []
     for l in logs:
@@ -223,6 +232,9 @@ def delete_by_filter():
             to_keep.append(l)
             continue
         if q_inbound and q_inbound not in l["inbound"]:
+            to_keep.append(l)
+            continue
+        if q_direction and q_direction not in l["direction"]:
             to_keep.append(l)
             continue
         if q_date and q_date not in l["datetime"]:
@@ -282,8 +294,6 @@ def admins():
             except:
                 flash("Ошибка при добавлении админа!", "danger")
     return render_template("admins.html", admins=admins)
-
-# ==== Инициализация БД ====
 
 def init_db():
     if not os.path.exists(DB_PATH):

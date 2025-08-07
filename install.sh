@@ -3,12 +3,19 @@
 set -e
 
 INSTALL_DIR="/opt/xui-traffic-web"
+REPO_URL="https://github.com/maxgalzer/xui-traffic-web.git"
 PYTHON_BIN="python3"
 PORT_DEFAULT=8060
 ACCESS_LOG_DEFAULT="/usr/local/x-ui/access.log"
 TIMEZONE_DEFAULT=0
 
 echo -e "\n=== Установка XUI Traffic Web ===\n"
+
+# [0/8] Клонирование репозитория, если директории нет
+if [ ! -d "$INSTALL_DIR" ]; then
+    echo "[0/8] Клонирование репозитория..."
+    git clone $REPO_URL $INSTALL_DIR
+fi
 
 # 1. Обновление системы
 echo "[1/8] Обновление системы..."

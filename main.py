@@ -32,7 +32,7 @@ def parse_log_line(line):
         inbound = "-"
         direction = "-"
         if "[" in line and "]" in line:
-            meta = line.split("[",1)[1].split("]",1)[0].strip()  # inbound-51561 >> direct
+            meta = line.split("[",1)[1].split("]",1)[0].strip()
             if ">>" in meta:
                 inbound = meta.split(">>")[0].strip()
                 direction = meta.split(">>")[1].strip()
@@ -131,8 +131,15 @@ def logs():
     q_inbound = request.args.get("inbound", "").strip()
     q_direction = request.args.get("direction", "").strip()
     q_date = request.args.get("date", "").strip()
+    hide_internal = request.args.get("hide_internal", "") == "1"
     filtered = []
     for l in logs:
+        # --- фильтр служебных ---
+        if hide_internal:
+            if l["inbound"].strip() == "api -> api":
+                continue
+            if l["ip"] == "127.0.0.1" and l["domain"].startswith("127.0.0.1:"):
+                continue
         if q_email and q_email not in l["email"]:
             continue
         if q_ip and q_ip not in l["ip"]:
@@ -152,14 +159,16 @@ def logs():
     pages = (total + per_page - 1) // per_page
     paged = filtered[(page-1)*per_page:page*per_page]
     return render_template("logs.html", logs=paged, page=page, pages=pages, total=total,
-                           q_email=q_email, q_ip=q_ip, q_domain=q_domain, q_inbound=q_inbound, q_direction=q_direction, q_date=q_date)
+                           q_email=q_email, q_ip=q_ip, q_domain=q_domain, q_inbound=q_inbound, q_direction=q_direction, q_date=q_date,
+                           hide_internal=hide_internal)
 
 @app.route("/logs_json")
 def logs_json():
     if "user" not in session:
         return jsonify({"logs": []})
     logs = read_logs()
-    return jsonify({"logs": logs[:50]})  # Можно сделать больше/меньше
+    # Опционально: передавать hide_internal через JS и здесь тоже фильтровать (по аналогии с /logs)
+    return jsonify({"logs": logs[:50]})
 
 @app.route("/export")
 def export():
@@ -172,8 +181,14 @@ def export():
     q_inbound = request.args.get("inbound", "").strip()
     q_direction = request.args.get("direction", "").strip()
     q_date = request.args.get("date", "").strip()
+    hide_internal = request.args.get("hide_internal", "") == "1"
     filtered = []
     for l in logs:
+        if hide_internal:
+            if l["inbound"].strip() == "api -> api":
+                continue
+            if l["ip"] == "127.0.0.1" and l["domain"].startswith("127.0.0.1:"):
+                continue
         if q_email and q_email not in l["email"]:
             continue
         if q_ip and q_ip not in l["ip"]:
@@ -204,7 +219,7 @@ def clear_logs():
         return redirect(url_for("login"))
     open(ACCESS_LOG_PATH, "w").close()
     flash("Логи успешно очищены!", "success")
-    return redirect(url_for("logs"))
+    return redirect(url_for("logs", hide_internal=int(request.args.get("hide_internal", "0"))))
 
 @app.route("/rotate", methods=["POST"])
 def rotate_logs():
@@ -215,7 +230,7 @@ def rotate_logs():
         for l in logs:
             f.write(l["raw"] + "\n")
     flash("Логи успешно ротированы (оставлено 500 последних)!", "success")
-    return redirect(url_for("logs"))
+    return redirect(url_for("logs", hide_internal=int(request.args.get("hide_internal", "0"))))
 
 @app.route("/delete_by_filter", methods=["POST"])
 def delete_by_filter():
@@ -228,8 +243,16 @@ def delete_by_filter():
     q_inbound = request.form.get("inbound", "").strip()
     q_direction = request.form.get("direction", "").strip()
     q_date = request.form.get("date", "").strip()
+    hide_internal = request.form.get("hide_internal", "") == "1"
     to_keep = []
     for l in logs:
+        if hide_internal:
+            if l["inbound"].strip() == "api -> api":
+                to_keep.append(l)
+                continue
+            if l["ip"] == "127.0.0.1" and l["domain"].startswith("127.0.0.1:"):
+                to_keep.append(l)
+                continue
         if q_email and q_email not in l["email"]:
             to_keep.append(l)
             continue
@@ -252,7 +275,7 @@ def delete_by_filter():
         for l in to_keep:
             f.write(l["raw"] + "\n")
     flash("Записи по фильтру удалены!", "success")
-    return redirect(url_for("logs"))
+    return redirect(url_for("logs", hide_internal=int(hide_internal)))
 
 @app.route("/top")
 def top():

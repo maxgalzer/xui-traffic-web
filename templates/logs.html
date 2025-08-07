@@ -67,6 +67,7 @@
         {% endwith %}
 
         <div class="filter-box mb-2">
+            <!-- Фильтры и кнопки (оставлены, но без динамики) -->
             <form class="row" method="get" action="{{ url_for('logs') }}">
                 <div class="col-md-2">
                     <label class="form-label">Email клиента</label>
@@ -162,6 +163,33 @@
             Показано {{ logs|length }} из {{ total }} записей
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Динамическая автоподгрузка логов
+    function updateLogs() {
+        fetch('/logs_json')
+            .then(response => response.json())
+            .then(data => {
+                let tbody = document.querySelector('#logsTable tbody');
+                tbody.innerHTML = '';
+                for (let log of data.logs) {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${log.datetime}</td>
+                        <td>${log.email}</td>
+                        <td>${log.ip}</td>
+                        <td>${log.domain}</td>
+                        <td>${log.inbound}</td>
+                        <td>${log.direction}</td>
+                        <td>${log.protocol}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            });
+    }
+    setInterval(updateLogs, 10000); // 10 секунд
+    // Можешь вызвать updateLogs() сразу после загрузки, если нужно
+    </script>
 </body>
 </html>

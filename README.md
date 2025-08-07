@@ -73,5 +73,4 @@ systemctl restart xui-traffic-web
 Для полного удаления интерфейса:
 
 ```bash
-cd /opt/xui-traffic-web
-bash uninstall.sh
+bash <(curl -Ls https://github.com/maxgalzer/xui-traffic-web/raw/main/uninstall.sh)

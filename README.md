@@ -59,9 +59,9 @@ http://<IP вашего сервера>:<указанный порт> (по ум
 - **Пароли**: хранятся только в хэше (bcrypt).
 - **Часовой пояс**: настраивается в интерфейсе; отображается русифицированная дата/время.
 - **Удаление**:  
-    ```bash
-    bash uninstall.sh
-    ```
+```bash
+bash <(curl -Ls https://github.com/maxgalzer/xui-traffic-web/raw/main/uninstall.sh)
+```
 - **Перезапуск сервиса**:  
     ```bash
     systemctl restart xui-traffic-web

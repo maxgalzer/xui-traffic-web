@@ -128,7 +128,16 @@ else
     echo "[8/8] UFW не найден, настройте доступ к порту $PORT вручную, если требуется."
 fi
 
+# Получение IP сервера для финального вывода
+SERVER_IP=$(hostname -I | awk '{print $1}')
+if [[ -z "$SERVER_IP" || "$SERVER_IP" == "127.0.0.1" ]]; then
+    SERVER_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
+fi
+if [[ -z "$SERVER_IP" || "$SERVER_IP" == "127.0.0.1" ]]; then
+    SERVER_IP=$(curl -s ifconfig.me)
+fi
+
 echo -e "\nУстановка завершена!"
-echo "Интерфейс доступен по адресу: http://<ip_сервера>:$PORT"
+echo "Интерфейс доступен по адресу: http://$SERVER_IP:$PORT"
 echo "Логин: $ADMIN_LOGIN"
 echo "Чтобы удалить сервис: bash uninstall.sh"

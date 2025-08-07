@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>XUI Traffic Web — ТОП-10</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #181a1b;
+            color: #eee;
+        }
+        .header {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00adb5;
+        }
+        .stat-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-top: 40px;
+        }
+        .stat-card {
+            background: #23272b;
+            padding: 26px 28px;
+            border-radius: 15px;
+            min-width: 260px;
+            box-shadow: 0 4px 40px #0004;
+            margin-bottom: 24px;
+        }
+        .stat-card h4 {
+            color: #00adb5;
+            font-size: 1.2rem;
+            margin-bottom: 18px;
+        }
+        .stat-card ol {
+            padding-left: 24px;
+        }
+        .nav-link { color:#eee!important;}
+        .nav-link.active { color: #00adb5!important; font-weight: bold;}
+        .logout-btn {
+            position: absolute;
+            top: 24px;
+            right: 36px;
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger logout-btn">Выйти</a>
+    <div class="container mt-3">
+        <ul class="nav mb-4">
+            <li class="nav-item"><a href="{{ url_for('dashboard') }}" class="nav-link">Дашборд</a></li>
+            <li class="nav-item"><a href="{{ url_for('logs') }}" class="nav-link">Логи</a></li>
+            <li class="nav-item"><a href="{{ url_for('top') }}" class="nav-link active">ТОП-10</a></li>
+            <li class="nav-item"><a href="{{ url_for('settings') }}" class="nav-link">Настройки</a></li>
+            <li class="nav-item"><a href="{{ url_for('admins') }}" class="nav-link">Админы</a></li>
+        </ul>
+        <div class="header">ТОП-10 активностей</div>
+        <div class="stat-box">
+            <div class="stat-card">
+                <h4>ТОП-10 клиентов (email)</h4>
+                <ol>
+                    {% for email, count in emails %}
+                    <li>{{ email }} — <b>{{ count }}</b></li>
+                    {% endfor %}
+                </ol>
+            </div>
+            <div class="stat-card">
+                <h4>ТОП-10 IP-адресов</h4>
+                <ol>
+                    {% for ip, count in ips %}
+                    <li>{{ ip }} — <b>{{ count }}</b></li>
+                    {% endfor %}
+                </ol>
+            </div>
+            <div class="stat-card">
+                <h4>ТОП-10 доменов</h4>
+                <ol>
+                    {% for domain, count in domains %}
+                    <li>{{ domain }} — <b>{{ count }}</b></li>
+                    {% endfor %}
+                </ol>
+            </div>
+            <div class="stat-card">
+                <h4>ТОП-10 inbound</h4>
+                <ol>
+                    {% for inbound, count in inbounds %}
+                    <li>{{ inbound }} — <b>{{ count }}</b></li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

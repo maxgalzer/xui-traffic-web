@@ -11,11 +11,16 @@ TIMEZONE_DEFAULT=0
 
 echo -e "\n=== Установка XUI Traffic Web ===\n"
 
-# [0/8] Клонирование репозитория, если директории нет
+# --- Клонирование репозитория и запуск install.sh из нужной папки, если надо
 if [ ! -d "$INSTALL_DIR" ]; then
     echo "[0/8] Клонирование репозитория..."
     git clone $REPO_URL $INSTALL_DIR
+    cd $INSTALL_DIR
+    exec bash install.sh
+    exit 0
 fi
+
+cd $INSTALL_DIR
 
 # 1. Обновление системы
 echo "[1/8] Обновление системы..."
@@ -27,8 +32,7 @@ apt install -y python3 python3-pip python3-venv git
 
 # 3. Виртуальное окружение
 echo "[3/8] Создание venv..."
-cd $INSTALL_DIR
-python3 -m venv venv
+$PYTHON_BIN -m venv venv
 source venv/bin/activate
 
 # 4. Установка python-библиотек

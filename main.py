@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 import os
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
+from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash, jsonify
 from flask_bcrypt import Bcrypt
 from datetime import datetime, timedelta
 import pandas as pd
@@ -152,6 +153,13 @@ def logs():
     paged = filtered[(page-1)*per_page:page*per_page]
     return render_template("logs.html", logs=paged, page=page, pages=pages, total=total,
                            q_email=q_email, q_ip=q_ip, q_domain=q_domain, q_inbound=q_inbound, q_direction=q_direction, q_date=q_date)
+
+@app.route("/logs_json")
+def logs_json():
+    if "user" not in session:
+        return jsonify({"logs": []})
+    logs = read_logs()
+    return jsonify({"logs": logs[:50]})  # Можно сделать больше/меньше
 
 @app.route("/export")
 def export():

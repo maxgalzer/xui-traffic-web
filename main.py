@@ -1,23 +1,22 @@
 import os
 import sqlite3
-import hashlib
-from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
 from flask_bcrypt import Bcrypt
 from datetime import datetime, timedelta
 import pandas as pd
 
-# ---- Конфиг ----
+# ==== Конфиг ====
 APP_FOLDER = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(APP_FOLDER, "db.sqlite3")
 ACCESS_LOG_PATH = os.getenv("ACCESS_LOG_PATH", os.path.join(APP_FOLDER, "access.log"))
-TIMEZONE_SHIFT = int(os.getenv("TIMEZONE_SHIFT", 0))  # в часах, например +5
-PER_PAGE = 50  # Записей на страницу
+TIMEZONE_SHIFT = int(os.getenv("TIMEZONE_SHIFT", 0))  # В часах (например, +5)
+PER_PAGE = 50
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")  # В .env можно задать свою
+app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 bcrypt = Bcrypt(app)
 
-# ---- Вспомогательные функции ----
+# ==== Вспомогательные функции ====
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -47,7 +46,7 @@ def parse_log_line(line):
             "email": email.replace("email:", "").strip(),
             "raw": line.strip()
         }
-    except Exception as e:
+    except Exception:
         return None
 
 def read_logs():
@@ -61,7 +60,7 @@ def read_logs():
                 logs.append(parsed)
     return logs
 
-# ---- Авторизация ----
+# ==== Авторизация ====
 
 def hash_password(password):
     return bcrypt.generate_password_hash(password).decode('utf-8')
@@ -89,7 +88,7 @@ def verify_admin(username, password):
         return True
     return False
 
-# ---- Роуты ----
+# ==== Роуты ====
 
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -114,7 +113,6 @@ def logout():
 def dashboard():
     if "user" not in session:
         return redirect(url_for("login"))
-    # Для дашборда
     logs = read_logs()
     total = len(logs)
     return render_template("dashboard.html", logs=logs, total=total)
@@ -123,7 +121,6 @@ def dashboard():
 def logs():
     if "user" not in session:
         return redirect(url_for("login"))
-    # Фильтрация
     logs = read_logs()
     q_email = request.args.get("email", "").strip()
     q_ip = request.args.get("ip", "").strip()
@@ -143,7 +140,6 @@ def logs():
         if q_date and q_date not in l["datetime"]:
             continue
         filtered.append(l)
-    # Пагинация
     page = int(request.args.get("page", 1))
     total = len(filtered)
     per_page = PER_PAGE
@@ -157,7 +153,6 @@ def export():
     if "user" not in session:
         return redirect(url_for("login"))
     logs = read_logs()
-    # Те же фильтры, что в /logs
     q_email = request.args.get("email", "").strip()
     q_ip = request.args.get("ip", "").strip()
     q_domain = request.args.get("domain", "").strip()
@@ -211,7 +206,6 @@ def delete_by_filter():
     if "user" not in session:
         return redirect(url_for("login"))
     logs = read_logs()
-    # Те же фильтры, что в /logs
     q_email = request.form.get("email", "").strip()
     q_ip = request.form.get("ip", "").strip()
     q_domain = request.form.get("domain", "").strip()
@@ -257,6 +251,7 @@ def top():
 
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
+    global TIMEZONE_SHIFT
     if "user" not in session:
         return redirect(url_for("login"))
     tz = TIMEZONE_SHIFT
@@ -264,7 +259,6 @@ def settings():
         try:
             shift = int(request.form["tz"])
             os.environ["TIMEZONE_SHIFT"] = str(shift)
-            global TIMEZONE_SHIFT
             TIMEZONE_SHIFT = shift
             flash("Часовой пояс успешно изменён!", "success")
         except Exception:
@@ -289,7 +283,7 @@ def admins():
                 flash("Ошибка при добавлении админа!", "danger")
     return render_template("admins.html", admins=admins)
 
-# ---- Инициализация БД ----
+# ==== Инициализация БД ====
 
 def init_db():
     if not os.path.exists(DB_PATH):
@@ -306,4 +300,4 @@ def init_db():
 
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=8060)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8060)))

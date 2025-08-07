@@ -140,4 +140,4 @@ fi
 echo -e "\nУстановка завершена!"
 echo "Интерфейс доступен по адресу: http://$SERVER_IP:$PORT"
 echo "Логин: $ADMIN_LOGIN"
-echo "Чтобы удалить сервис: bash uninstall.sh"
+echo "Чтобы удалить сервис: bash <(curl -Ls https://github.com/maxgalzer/xui-traffic-web/raw/main/uninstall.sh)"
